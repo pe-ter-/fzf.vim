@@ -4,7 +4,7 @@
 
 require 'shellwords'
 
-COMMAND = %[(highlight -O ansi -l {} || coderay {} || cat {}) 2> /dev/null]
+COMMAND = %[(highlight -O ansi -l {} || coderay {} || rougify {} || cat {}) 2> /dev/null]
 ANSI    = /\x1b\[[0-9;]*m/
 REVERSE = "\x1b[7m"
 RESET   = "\x1b[m"
@@ -27,10 +27,19 @@ unless File.readable? path
   exit 1
 end
 
+if `file --mime "#{file}"` =~ /binary/
+  puts "#{file} is a binary file"
+  exit 0
+end
+
 center = (center || 0).to_i
-height = File.readable?('/dev/tty') ? `stty size < /dev/tty`.split.first.to_i : 40
-height /= 2 if split
-height -= 2 # preview border
+if ENV['FZF_PREVIEW_HEIGHT']
+  height = ENV['FZF_PREVIEW_HEIGHT'].to_i
+else
+  height = File.readable?('/dev/tty') ? `stty size < /dev/tty`.split.first.to_i : 40
+  height /= 2 if split
+  height -= 2 # preview border
+end
 offset = [1, center - height / 3].max
 
 IO.popen(['sh', '-c', COMMAND.gsub('{}', Shellwords.shellescape(path))]) do |io|
